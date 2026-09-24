@@ -10,7 +10,7 @@ Other signals we record, because any change in them is worth looking at:
   * queue_connector   – Queue-it's JS connector showing up in the page. It can
                         be loaded before the waiting room is switched on.
   * queue_cookie      – Queue-it cookies (QueueITAccepted-*) set on the visit.
-  * blocked           – Imperva/Incapsula served a bot challenge instead of the
+  * blocked           – Imperva/Incapsula or DataDome served a bot challenge instead of the
                         page. This is NOT a drop signal; it means we can't see
                         the page, and it's reported so it isn't mistaken for one.
 
@@ -35,7 +35,7 @@ WAITING_ROOM_TEXT = re.compile(
 # Imperva bot-challenge / block pages.
 BLOCK_TEXT = re.compile(
     r"Incapsula incident ID|Request unsuccessful|_Incapsula_Resource|"
-    r"Pardon Our Interruption|verify you are (a )?human",
+    r"Pardon Our Interruption|verify you are (a )?human|captcha-delivery\.com",
     re.I,
 )
 QUEUE_CONNECTOR = re.compile(r"queue-it\.net|queueclient(\.min)?\.js|queueconfigloader", re.I)

@@ -57,23 +57,40 @@ class HttpFetcher:
 
 
 class BrowserFetcher:
-    """Real Chromium via Playwright. Slower, but renders what a shopper actually sees."""
+    """A real, visible Chrome window with a saved profile.
 
-    def __init__(self, headless: bool = True, timeout: float = 30):
+    Cookies persist in state/browser-profile, so if the site shows a
+    "prove you're human" check you can solve it once by hand and later
+    checks reuse that session, the same as your everyday browser does.
+    """
+
+    PROFILE_DIR = "state/browser-profile"
+
+    def __init__(self, headless: bool = False, timeout: float = 30):
         from playwright.sync_api import sync_playwright  # optional dependency
 
         self._pw = sync_playwright().start()
-        self._browser = self._pw.chromium.launch(headless=headless)
-        self._context = self._browser.new_context(user_agent=USER_AGENT, locale="en-US")
+        opts = dict(user_data_dir=self.PROFILE_DIR, headless=headless, locale="en-US")
+        try:
+            # Prefer the Google Chrome you already have installed.
+            self._context = self._pw.chromium.launch_persistent_context(channel="chrome", **opts)
+        except Exception:
+            self._context = self._pw.chromium.launch_persistent_context(**opts)
+        self._page = self._context.pages[0] if self._context.pages else self._context.new_page()
         self.timeout_ms = int(timeout * 1000)
 
     def get(self, url: str) -> Page:
-        page = self._context.new_page()
+        page = self._page
         chain: list[str] = []
-        page.on("framenavigated", lambda f: f == page.main_frame and chain.append(f.url))
+
+        def on_nav(frame):
+            if frame == page.main_frame:
+                chain.append(frame.url)
+
+        page.on("framenavigated", on_nav)
         try:
             resp = page.goto(url, wait_until="domcontentloaded", timeout=self.timeout_ms)
-            page.wait_for_timeout(2500)  # let client-side redirects (e.g. Queue-it) fire
+            page.wait_for_timeout(3000)  # let client-side redirects (e.g. Queue-it) fire
             return Page(
                 url=url,
                 final_url=page.url,
@@ -81,13 +98,19 @@ class BrowserFetcher:
                 html=page.content(),
                 headers={k.lower(): v for k, v in (resp.headers if resp else {}).items()},
                 cookies=sorted({c["name"] for c in self._context.cookies()}),
-                redirect_chain=[u for u in chain[:-1] if u != "about:blank"],
+                redirect_chain=[u for u in chain[:-1] if u not in ("about:blank", url)],
             )
         finally:
-            page.close()
+            page.remove_listener("framenavigated", on_nav)
+
+    def open_for_user(self, url: str) -> None:
+        """Show the page and wait, so the user can pass any human check by hand."""
+        self._page.goto(url, wait_until="domcontentloaded", timeout=self.timeout_ms)
+        input("A browser window is open. If it asks you to prove you're human, do that,\n"
+              "wait until the normal Pokemon Center homepage shows, then press Enter here... ")
 
     def close(self) -> None:
-        self._browser.close()
+        self._context.close()
         self._pw.stop()
 
 

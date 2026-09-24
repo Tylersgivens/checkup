@@ -8,7 +8,7 @@ targets:
   - name: pokemoncenter-queue
     type: pokemoncenter.queue
     url: https://www.pokemoncenter.com/
-    fetcher: http            # switch to "browser" if you keep getting BLOCKED
+    fetcher: browser         # Pokémon Center blocks plain "http" requests (DataDome/Imperva)
     interval_seconds: 30
     alert_on: [QUEUE_LIVE]
     # A lower-priority "heads up" when any of these change. They may move

@@ -1,6 +1,7 @@
 """CLI.
 
   python -m checkup run [-c config.yaml]          start monitoring
+  python -m checkup browser                        open the saved browser profile to pass a human check
   python -m checkup inspect URL [--type T] [--browser] [--save FILE]
                                                    fetch once and print every signal
 """
@@ -32,12 +33,22 @@ def main(argv: list[str] | None = None) -> int:
     ins.add_argument("--browser", action="store_true", help="use a real browser (Playwright)")
     ins.add_argument("--save", help="also write the raw HTML to this file")
 
+    sub.add_parser("browser", help="open the monitor's browser so you can pass a human check")
+
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     if args.cmd == "run":
         with open(args.config) as f:
             Monitor(yaml.safe_load(f)).run_forever()
+        return 0
+
+    if args.cmd == "browser":
+        fetcher = make_fetcher("browser")
+        try:
+            fetcher.open_for_user("https://www.pokemoncenter.com/")
+        finally:
+            fetcher.close()
         return 0
 
     fetcher = RecordingFetcher(make_fetcher("browser" if args.browser else "http"))
