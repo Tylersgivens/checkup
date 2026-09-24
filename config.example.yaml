@@ -1,0 +1,24 @@
+# Copy to config.yaml and edit. Alerts go to the console, plus Discord and/or
+# phone push if you set DISCORD_WEBHOOK_URL and/or NTFY_TOPIC in your environment.
+
+interval_seconds: 60   # default per target; keep this polite, as fast polling gets you blocked
+
+targets:
+  # The main signal: is the Queue-it waiting room switched on?
+  - name: pokemoncenter-queue
+    type: pokemoncenter.queue
+    url: https://www.pokemoncenter.com/
+    fetcher: http            # switch to "browser" if you keep getting BLOCKED
+    interval_seconds: 30
+    alert_on: [QUEUE_LIVE]
+    # A lower-priority "heads up" when any of these change. They may move
+    # before the queue itself opens, so they're worth learning from.
+    heads_up_on: [queue_connector, queue_cookie, script_hosts]
+
+  # Watch specific products you care about (paste real product URLs).
+  # - name: pc-some-etb
+  #   type: pokemoncenter.product
+  #   url: https://www.pokemoncenter.com/product/XXX-XXXXX/...
+  #   interval_seconds: 90
+  #   alert_on: [IN_STOCK, PREORDER, QUEUE_LIVE]
+  #   heads_up_on: [schema, button]
